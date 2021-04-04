@@ -1,3 +1,7 @@
+## 0.0.3
+
+- Change LICENSE
+
 ## 0.0.2
 
 - Add some comments
