@@ -7,9 +7,9 @@ environment:
   sdk: '>=2.12.0 <3.0.0'
 
 dependencies:
-  dia: 0.0.3
+  dia: ^0.0.3
 #    path: ../dia
-  path_to_regexp: 0.4.0
+  path_to_regexp: ^0.4.0
 
 dev_dependencies:
   pedantic: ^1.11.0
