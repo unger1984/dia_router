@@ -45,10 +45,10 @@ For more details, please, see example folder && test folder.
 ## Use with:
 
 * [dia](https://github.com/unger1984/dia) - A simple dart http server in Koa2 style.
+* [dia_cors](https://github.com/unger1984/dia_cors) - Package for CORS middleware.
 
 ## Plans:
 
-* dia_cors - Package for CORS middleware. In progress.
 * dia_body - Package to parse request body.
 * dia_static - Package to serve static files.
 
