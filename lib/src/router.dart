@@ -13,58 +13,72 @@ class Router<T extends Routing> {
   final List<Middleware<T>> _middlewares = [];
   final List<RouterMiddleware<T>> _routerMiddlewares = [];
 
+  /// Default constructor
   Router(String prefix)
       : assert(RegExp(r'^/').hasMatch(prefix), 'Prefix mast start with "/"'),
-        _prefix = prefix.replaceAll(r'\/$', '');
+        _prefix = prefix.replaceAll(RegExp(r'\/$'), '');
 
+  /// Add [middleware] to queue
   void use(Middleware<T> middleware) {
     _middlewares.add(middleware);
   }
 
+  /// Add [middleware] to all HTTP request
   void all(String path, Middleware<T> middleware) {
     _routerMiddlewares.add(RouterMiddleware('all', path, middleware));
   }
 
+  /// Add [middleware] to GET HTTP request
   void get(String path, Middleware<T> middleware) {
     _routerMiddlewares.add(RouterMiddleware('get', path, middleware));
   }
 
+  /// Add [middleware] to POST HTTP request
   void post(String path, Middleware<T> middleware) {
     _routerMiddlewares.add(RouterMiddleware('post', path, middleware));
   }
 
+  /// Add [middleware] to PUT HTTP request
   void put(String path, Middleware<T> middleware) {
     _routerMiddlewares.add(RouterMiddleware('put', path, middleware));
   }
 
+  /// Add [middleware] to PATCH HTTP request
   void patch(String path, Middleware<T> middleware) {
     _routerMiddlewares.add(RouterMiddleware('patch', path, middleware));
   }
 
+  /// Add [middleware] to DELETE HTTP request
   void delete(String path, Middleware<T> middleware) {
     _routerMiddlewares.add(RouterMiddleware('put', path, middleware));
   }
 
+  /// Add [middleware] to DELETE HTTP request
   void del(String path, Middleware<T> middleware) {
     delete(path, middleware);
   }
 
+  /// Add [middleware] to HEADER HTTP request
   void header(String path, Middleware<T> middleware) {
     _routerMiddlewares.add(RouterMiddleware('header', path, middleware));
   }
 
+  /// Add [middleware] to CONNECT HTTP request
   void connect(String path, Middleware<T> middleware) {
     _routerMiddlewares.add(RouterMiddleware('connect', path, middleware));
   }
 
+  /// Add [middleware] to OPTIONS HTTP request
   void options(String path, Middleware<T> middleware) {
     _routerMiddlewares.add(RouterMiddleware('options', path, middleware));
   }
 
+  /// Add [middleware] to TRACE HTTP request
   void trace(String path, Middleware<T> middleware) {
     _routerMiddlewares.add(RouterMiddleware('trace', path, middleware));
   }
 
+  /// Router main middleware
   Middleware<T> get middleware => (T ctx, next) async {
         final uri = ctx.request.uri;
 
@@ -75,82 +89,93 @@ class Router<T extends Routing> {
           ctx.routerPrefix += _prefix;
           ctx.query.addAll(ctx.request.uri.queryParameters);
 
-          /// Use middlewares
-          final useFn = _compose(_middlewares);
-          await useFn(ctx, null);
-
           final filteredMiddlewares = _routerMiddlewares
-              .where((element) => pathToRegExp(ctx.routerPrefix + element.path)
-                  .hasMatch(ctx.request.uri.path))
+              .where((element) =>
+                  ((ctx.routerPrefix + element.path).isEmpty &&
+                      (ctx.request.uri.path == '/' ||
+                          ctx.request.uri.path.isEmpty)) ||
+                  pathToRegExp(ctx.routerPrefix + element.path)
+                      .hasMatch(ctx.request.uri.path))
               .toList();
-          final allFn = _compose(filteredMiddlewares
-              .where((element) => element.method == 'all')
-              .toList());
-          await allFn(ctx, null);
 
-          /// default OPTIONS response
-          if (ctx.request.method.toLowerCase() == 'options' &&
-              ctx.headers['Allow'] == null) {
-            final allow = filteredMiddlewares
-                .map((e) => e.method == 'all'
-                    ? 'GET,POST,PUT,DELETE,OPTIONS'
-                    : e.method.toUpperCase())
-                .toList();
-            ctx.set('Allow', allow.join(','));
-            ctx.statusCode = 204;
-            ctx.body = '';
+          // TODO detect router middleware router
+          if (filteredMiddlewares.isEmpty && _middlewares.isEmpty) {
+            /// No handler to route
+            ctx.throwError(404);
+          } else {
+            /// Use middlewares
+            final useFn = _compose(_middlewares);
+            await useFn(ctx, null);
+
+            final allFn = _compose(filteredMiddlewares
+                .where((element) => element.method == 'all')
+                .toList());
+            await allFn(ctx, null);
+
+            /// default OPTIONS response
+            if (ctx.request.method.toLowerCase() == 'options' &&
+                ctx.headers['Allow'] == null) {
+              final allow = filteredMiddlewares
+                  .map((e) => e.method == 'all'
+                      ? 'GET,POST,PUT,DELETE,OPTIONS'
+                      : e.method.toUpperCase())
+                  .toList();
+              ctx.set('Allow', allow.join(','));
+              ctx.statusCode = 204;
+              ctx.body = '';
+            }
+
+            var methodFn;
+            switch (ctx.request.method.toLowerCase()) {
+              case 'get':
+                methodFn = _compose(filteredMiddlewares
+                    .where((element) => element.method == 'get')
+                    .toList());
+                break;
+              case 'post':
+                methodFn = _compose(filteredMiddlewares
+                    .where((element) => element.method == 'post')
+                    .toList());
+                break;
+              case 'put':
+                methodFn = _compose(filteredMiddlewares
+                    .where((element) => element.method == 'put')
+                    .toList());
+                break;
+              case 'patch':
+                methodFn = _compose(filteredMiddlewares
+                    .where((element) => element.method == 'patch')
+                    .toList());
+                break;
+              case 'delete':
+                methodFn = _compose(filteredMiddlewares
+                    .where((element) => element.method == 'delete')
+                    .toList());
+                break;
+              case 'header':
+                methodFn = _compose(filteredMiddlewares
+                    .where((element) => element.method == 'header')
+                    .toList());
+                break;
+              case 'connect':
+                methodFn = _compose(filteredMiddlewares
+                    .where((element) => element.method == 'connect')
+                    .toList());
+                break;
+              case 'options':
+                methodFn = _compose(filteredMiddlewares
+                    .where((element) => element.method == 'options')
+                    .toList());
+                break;
+              case 'trace':
+                methodFn = _compose(filteredMiddlewares
+                    .where((element) => element.method == 'trace')
+                    .toList());
+                break;
+            }
+
+            if (methodFn != null) await methodFn(ctx, null);
           }
-
-          var methodFn;
-          switch (ctx.request.method.toLowerCase()) {
-            case 'get':
-              methodFn = _compose(filteredMiddlewares
-                  .where((element) => element.method == 'get')
-                  .toList());
-              break;
-            case 'post':
-              methodFn = _compose(filteredMiddlewares
-                  .where((element) => element.method == 'post')
-                  .toList());
-              break;
-            case 'put':
-              methodFn = _compose(filteredMiddlewares
-                  .where((element) => element.method == 'put')
-                  .toList());
-              break;
-            case 'patch':
-              methodFn = _compose(filteredMiddlewares
-                  .where((element) => element.method == 'patch')
-                  .toList());
-              break;
-            case 'delete':
-              methodFn = _compose(filteredMiddlewares
-                  .where((element) => element.method == 'delete')
-                  .toList());
-              break;
-            case 'header':
-              methodFn = _compose(filteredMiddlewares
-                  .where((element) => element.method == 'header')
-                  .toList());
-              break;
-            case 'connect':
-              methodFn = _compose(filteredMiddlewares
-                  .where((element) => element.method == 'connect')
-                  .toList());
-              break;
-            case 'options':
-              methodFn = _compose(filteredMiddlewares
-                  .where((element) => element.method == 'options')
-                  .toList());
-              break;
-            case 'trace':
-              methodFn = _compose(filteredMiddlewares
-                  .where((element) => element.method == 'trace')
-                  .toList());
-              break;
-          }
-
-          if (methodFn != null) await methodFn(ctx, null);
         }
         ctx.routerPrefix = savedPrefix;
         await next();
@@ -174,9 +199,7 @@ class Router<T extends Routing> {
         var fn;
         if (middlewares.length > currentCallIndex) {
           final middleware = middlewares[currentCallIndex];
-          fn = middleware is RouterMiddleware
-              ? middleware.middleware
-              : middleware;
+          fn = middleware is RouterMiddleware ? middleware.handler : middleware;
           if (middleware is RouterMiddleware) {
             final parameters = <String>[];
             final regExp = pathToRegExp(
@@ -191,8 +214,7 @@ class Router<T extends Routing> {
           }
         }
         if (currentCallIndex == middlewares.length) {
-          fn =
-              next != null && next is RouterMiddleware ? next.middleware : next;
+          fn = next != null && next is RouterMiddleware ? next.handler : next;
         }
         if (fn == null) return () => null;
 

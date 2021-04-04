@@ -2,14 +2,20 @@ import 'package:dia/dia.dart';
 
 import 'routing_mixin.dart';
 
+/// Router middleware for http request
 class RouterMiddleware<T extends Routing> {
-  final Middleware<T> _middleware;
+  final Middleware<T> _handler;
   final String _path;
   final String _method;
 
-  RouterMiddleware(this._method, this._path, this._middleware);
+  RouterMiddleware(this._method, this._path, this._handler);
 
-  Middleware<T> get middleware => _middleware;
-  String get path => _path;
+  /// Handler
+  Middleware<T> get handler => _handler;
+
+  /// Route path
+  String get path => _path.replaceAll(RegExp(r'\/$'), '');
+
+  /// HTTP Method
   String get method => _method;
 }

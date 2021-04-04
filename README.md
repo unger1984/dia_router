@@ -40,7 +40,7 @@ params={id:12} query={count:10}
 
 Router support all HTTP method: GET,POST,PUT,PATCH,OPTION,DELETE,HEADER,CONNECT,TRACE
 
-For more details, please, see example folder.
+For more details, please, see example folder && test folder.
 
 ## Use with:
 

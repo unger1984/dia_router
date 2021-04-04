@@ -9,7 +9,9 @@ mixin Routing<T extends Context> on Context {
   /// RegExp route params
   Map<String, String> get params => _params;
 
+  /// RegExp route params setter
   set params(Map<String, String> params) => _params = params;
 
+  /// Uri.params
   Map<String, String> get query => _query;
 }

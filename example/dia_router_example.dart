@@ -21,7 +21,7 @@ void main() {
   /// add sub router middleware to router
   router1.use(router2.middleware);
 
-  /// add hendler to GET request
+  /// add handler to GET request
   router2.get('/data/:id', (ctx, next) async {
     ctx.body = '${ctx.params}';
   });
