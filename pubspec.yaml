@@ -1,13 +1,13 @@
 name: dia_router
-description: A router for Dia. WARNING do not use it in production! It is alfa version and they need in more work!
-version: 0.0.3
+description: A router for Dia. Allow add dia middlewares for handle different url addresses.
+version: 0.0.4
 homepage: https://github.com/unger1984/dia_router
 
 environment:
   sdk: '>=2.12.0 <3.0.0'
 
 dependencies:
-  dia: ^0.0.4
+  dia: ^0.0.6
   path_to_regexp: ^0.4.0
 
 dev_dependencies:

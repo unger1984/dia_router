@@ -2,8 +2,6 @@ Router middleware to [Dia](https://github.com/unger1984/dia).
 
 Middleware like as koa_router.
 
-#### !!!WARNING!!! Not production ready!
-
 ## Usage:
 
 A simple usage example:
@@ -47,6 +45,7 @@ For more details, please, see example folder && test folder.
 * [dia](https://github.com/unger1984/dia) - A simple dart http server in Koa2 style.
 * [dia_cors](https://github.com/unger1984/dia_cors) - Package for CORS middleware.
 * [dia_body](https://github.com/unger1984/dia_body) - Package with the middleware for parse request body.
+* [dia_static](https://github.com/unger1984/dia_static) - Package to serving static files.
 
 ## Plans:
 
