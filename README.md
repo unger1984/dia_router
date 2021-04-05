@@ -47,10 +47,6 @@ For more details, please, see example folder && test folder.
 * [dia_body](https://github.com/unger1984/dia_body) - Package with the middleware for parse request body.
 * [dia_static](https://github.com/unger1984/dia_static) - Package to serving static files.
 
-## Plans:
-
-* dia_static - Package to serve static files.
-
 ## Features and bugs:
 
 I will be glad for any help and feedback!
