@@ -1,3 +1,8 @@
+## 0.0.5
+
+- Update Dia version to 0.0.7
+- Fix typed problems
+
 ## 0.0.4
 
 - Update Dia version to 0.0.6

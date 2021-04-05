@@ -104,10 +104,10 @@ class Router<T extends Routing> {
             ctx.throwError(404);
           } else {
             /// Use middlewares
-            final useFn = _compose(_middlewares);
+            final useFn = _composeMiddlewares(_middlewares);
             await useFn(ctx, null);
 
-            final allFn = _compose(filteredMiddlewares
+            final allFn = _composeRouterMiddlewares(filteredMiddlewares
                 .where((element) => element.method == 'all')
                 .toList());
             await allFn(ctx, null);
@@ -128,47 +128,47 @@ class Router<T extends Routing> {
             var methodFn;
             switch (ctx.request.method.toLowerCase()) {
               case 'get':
-                methodFn = _compose(filteredMiddlewares
+                methodFn = _composeRouterMiddlewares(filteredMiddlewares
                     .where((element) => element.method == 'get')
                     .toList());
                 break;
               case 'post':
-                methodFn = _compose(filteredMiddlewares
+                methodFn = _composeRouterMiddlewares(filteredMiddlewares
                     .where((element) => element.method == 'post')
                     .toList());
                 break;
               case 'put':
-                methodFn = _compose(filteredMiddlewares
+                methodFn = _composeRouterMiddlewares(filteredMiddlewares
                     .where((element) => element.method == 'put')
                     .toList());
                 break;
               case 'patch':
-                methodFn = _compose(filteredMiddlewares
+                methodFn = _composeRouterMiddlewares(filteredMiddlewares
                     .where((element) => element.method == 'patch')
                     .toList());
                 break;
               case 'delete':
-                methodFn = _compose(filteredMiddlewares
+                methodFn = _composeRouterMiddlewares(filteredMiddlewares
                     .where((element) => element.method == 'delete')
                     .toList());
                 break;
               case 'header':
-                methodFn = _compose(filteredMiddlewares
+                methodFn = _composeRouterMiddlewares(filteredMiddlewares
                     .where((element) => element.method == 'header')
                     .toList());
                 break;
               case 'connect':
-                methodFn = _compose(filteredMiddlewares
+                methodFn = _composeRouterMiddlewares(filteredMiddlewares
                     .where((element) => element.method == 'connect')
                     .toList());
                 break;
               case 'options':
-                methodFn = _compose(filteredMiddlewares
+                methodFn = _composeRouterMiddlewares(filteredMiddlewares
                     .where((element) => element.method == 'options')
                     .toList());
                 break;
               case 'trace':
-                methodFn = _compose(filteredMiddlewares
+                methodFn = _composeRouterMiddlewares(filteredMiddlewares
                     .where((element) => element.method == 'trace')
                     .toList());
                 break;
@@ -187,7 +187,38 @@ class Router<T extends Routing> {
     ctx.body = error.defaultBody;
   }
 
-  Function _compose(List middlewares) {
+  Function _composeMiddlewares(List<Middleware<T>> middlewares) {
+    return (T ctx, Middleware<T>? next) {
+      var lastCalledIndex = -1;
+
+      FutureOr dispatch(int currentCallIndex) async {
+        if (currentCallIndex <= lastCalledIndex) {
+          throw Exception('next() called multiple times');
+        }
+        lastCalledIndex = currentCallIndex;
+        var fn = middlewares.length > currentCallIndex
+            ? middlewares[currentCallIndex]
+            : null;
+        if (currentCallIndex == middlewares.length) {
+          fn = next;
+        }
+        if (fn == null) return () => null;
+        return fn(ctx, () => dispatch(currentCallIndex + 1))
+            .catchError((error, stackTrace) {
+          if (error is HttpError) {
+            _responseHttpError(ctx, error);
+          } else {
+            final err = HttpError(500, stackTrace: stackTrace, error: error);
+            _responseHttpError(ctx, err);
+          }
+        });
+      }
+
+      return dispatch(0);
+    };
+  }
+
+  Function _composeRouterMiddlewares(List<RouterMiddleware<T>> middlewares) {
     return (T ctx, next) {
       var lastCalledIndex = -1;
 
@@ -199,17 +230,15 @@ class Router<T extends Routing> {
         var fn;
         if (middlewares.length > currentCallIndex) {
           final middleware = middlewares[currentCallIndex];
-          fn = middleware is RouterMiddleware ? middleware.handler : middleware;
-          if (middleware is RouterMiddleware) {
-            final parameters = <String>[];
-            final regExp = pathToRegExp(
-                ctx.routerPrefix + middlewares[currentCallIndex].path,
-                parameters: parameters);
-            if (parameters.isNotEmpty) {
-              final match = regExp.matchAsPrefix(ctx.request.uri.path);
-              if (match != null) {
-                ctx.params = extract(parameters, match);
-              }
+          fn = middleware.handler;
+          final parameters = <String>[];
+          final regExp = pathToRegExp(
+              ctx.routerPrefix + middlewares[currentCallIndex].path,
+              parameters: parameters);
+          if (parameters.isNotEmpty) {
+            final match = regExp.matchAsPrefix(ctx.request.uri.path);
+            if (match != null) {
+              ctx.params = extract(parameters, match);
             }
           }
         }
