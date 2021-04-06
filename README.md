@@ -7,6 +7,8 @@ Middleware like as koa_router.
 A simple usage example:
 
 ```dart
+import 'dart:io';
+
 import 'package:dia/dia.dart';
 import 'package:dia_router/dia_router.dart';
 
@@ -16,7 +18,7 @@ class ContextWithRouting extends Context with Routing {
 }
 
 main() {
-  final app = dia.App<ContextWithRouting>();
+  final app = App<ContextWithRouting>();
   
   final router = Router('/prefix');
   router.get('/path/:id', (ctx,next) async {
