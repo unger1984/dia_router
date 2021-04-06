@@ -7,78 +7,94 @@ import 'package:path_to_regexp/path_to_regexp.dart';
 
 import 'routing_mixin.dart';
 
-/// TODO: add documentation
+/// Main router object for Dia
+/// Allows you to create separate middleware for specific urls and http methods
+/// [Middleware] in [Router] mast to be [Context] with mixin [Routing]
 class Router<T extends Routing> {
   final String _prefix;
   final List<Middleware<T>> _middlewares = [];
   final List<RouterMiddleware<T>> _routerMiddlewares = [];
 
   /// Default constructor
+  /// [perfix] - url path that controlled by this [Router]
   Router(String prefix)
       : assert(RegExp(r'^/').hasMatch(prefix), 'Prefix mast start with "/"'),
         _prefix = prefix.replaceAll(RegExp(r'\/$'), '');
 
-  /// Add [middleware] to queue
+  /// Add [Middleware] to Router
+  /// all [Middleware] called before [RouterMiddleware]
   void use(Middleware<T> middleware) {
     _middlewares.add(middleware);
   }
 
-  /// Add [middleware] to all HTTP request
+  /// Add [Middleware] to all HTTP request methods
+  /// [path] - url path that handling by added [Middleware]
   void all(String path, Middleware<T> middleware) {
     _routerMiddlewares.add(RouterMiddleware('all', path, middleware));
   }
 
-  /// Add [middleware] to GET HTTP request
+  /// Add [Middleware] to GET HTTP request methods
+  /// [path] - url path that handling by added [Middleware]
   void get(String path, Middleware<T> middleware) {
     _routerMiddlewares.add(RouterMiddleware('get', path, middleware));
   }
 
-  /// Add [middleware] to POST HTTP request
+  /// Add [Middleware] to POST HTTP request methods
+  /// [path] - url path that handling by added [Middleware]
   void post(String path, Middleware<T> middleware) {
     _routerMiddlewares.add(RouterMiddleware('post', path, middleware));
   }
 
-  /// Add [middleware] to PUT HTTP request
+  /// Add [Middleware] to PUT HTTP request methods
+  /// [path] - url path that handling by added [Middleware]
   void put(String path, Middleware<T> middleware) {
     _routerMiddlewares.add(RouterMiddleware('put', path, middleware));
   }
 
-  /// Add [middleware] to PATCH HTTP request
+  /// Add [Middleware] to PATCH HTTP request methods
+  /// [path] - url path that handling by added [Middleware]
   void patch(String path, Middleware<T> middleware) {
     _routerMiddlewares.add(RouterMiddleware('patch', path, middleware));
   }
 
-  /// Add [middleware] to DELETE HTTP request
+  /// Add [Middleware] to DELETE HTTP request methods
+  /// [path] - url path that handling by added [Middleware]
   void delete(String path, Middleware<T> middleware) {
     _routerMiddlewares.add(RouterMiddleware('put', path, middleware));
   }
 
-  /// Add [middleware] to DELETE HTTP request
+  /// Add [Middleware] to DELETE HTTP request methods
+  /// this is symlink to [delete] method
+  /// [path] - url path that handling by added [Middleware]
   void del(String path, Middleware<T> middleware) {
     delete(path, middleware);
   }
 
-  /// Add [middleware] to HEADER HTTP request
-  void header(String path, Middleware<T> middleware) {
-    _routerMiddlewares.add(RouterMiddleware('header', path, middleware));
+  /// Add [Middleware] to HEAD HTTP request methods
+  /// [path] - url path that handling by added [Middleware]
+  void head(String path, Middleware<T> middleware) {
+    _routerMiddlewares.add(RouterMiddleware('head', path, middleware));
   }
 
-  /// Add [middleware] to CONNECT HTTP request
+  /// Add [Middleware] to CONNECT HTTP request methods
+  /// [path] - url path that handling by added [Middleware]
   void connect(String path, Middleware<T> middleware) {
     _routerMiddlewares.add(RouterMiddleware('connect', path, middleware));
   }
 
-  /// Add [middleware] to OPTIONS HTTP request
+  /// Add [Middleware] to OPTIONS HTTP request methods
+  /// [path] - url path that handling by added [Middleware]
   void options(String path, Middleware<T> middleware) {
     _routerMiddlewares.add(RouterMiddleware('options', path, middleware));
   }
 
-  /// Add [middleware] to TRACE HTTP request
+  /// Add [Middleware] to TRACE HTTP request methods
+  /// [path] - url path that handling by added [Middleware]
   void trace(String path, Middleware<T> middleware) {
     _routerMiddlewares.add(RouterMiddleware('trace', path, middleware));
   }
 
-  /// Router main middleware
+  /// Getter for [Middleware] that can use in Dia [App]
   Middleware<T> get middleware => (T ctx, next) async {
         final uri = ctx.request.uri;
 
@@ -117,7 +133,7 @@ class Router<T extends Routing> {
                 ctx.headers['Allow'] == null) {
               final allow = filteredMiddlewares
                   .map((e) => e.method == 'all'
-                      ? 'GET,POST,PUT,DELETE,OPTIONS'
+                      ? 'GET,POST,PUT,DELETE,OPTIONS,HEAD'
                       : e.method.toUpperCase())
                   .toList();
               ctx.set('Allow', allow.join(','));
@@ -152,9 +168,9 @@ class Router<T extends Routing> {
                     .where((element) => element.method == 'delete')
                     .toList());
                 break;
-              case 'header':
+              case 'head':
                 methodFn = _composeRouterMiddlewares(filteredMiddlewares
-                    .where((element) => element.method == 'header')
+                    .where((element) => element.method == 'head')
                     .toList());
                 break;
               case 'connect':
@@ -181,12 +197,14 @@ class Router<T extends Routing> {
         await next();
       };
 
+  /// Private method for generate HTTP error response
   void _responseHttpError(T ctx, HttpError error) {
     ctx.statusCode = error.status;
     ctx.contentType = io.ContentType.html;
     ctx.body = error.defaultBody;
   }
 
+  /// Private method for compose middlewares to one function
   Function _composeMiddlewares(List<Middleware<T>> middlewares) {
     return (T ctx, Middleware<T>? next) {
       var lastCalledIndex = -1;
@@ -218,6 +236,7 @@ class Router<T extends Routing> {
     };
   }
 
+  /// Private method for compose router middlewares to one function
   Function _composeRouterMiddlewares(List<RouterMiddleware<T>> middlewares) {
     return (T ctx, next) {
       var lastCalledIndex = -1;

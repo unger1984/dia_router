@@ -2,7 +2,11 @@ import 'package:dia/dia.dart';
 
 import 'routing_mixin.dart';
 
-/// Router middleware for http request
+/// [Router] [Middleware] for http request
+/// Add to [Middleware] information about http method
+/// and url path
+/// For internal use
+/// TODO may be private/protected ?
 class RouterMiddleware<T extends Routing> {
   final Middleware<T> _handler;
   final String _path;

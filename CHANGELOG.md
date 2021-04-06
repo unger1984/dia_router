@@ -1,3 +1,10 @@
+## 0.0.6
+
+- Update Dia version to 0.0.8
+- Add more information to Readme
+- Add more dartdoc comments in code
+- Fix for HEAD http method
+
 ## 0.0.5
 
 - Update Dia version to 0.0.7

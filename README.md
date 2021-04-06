@@ -1,6 +1,21 @@
-Router middleware to [Dia](https://github.com/unger1984/dia).
+<a href="https://pub.dartlang.org/packages/dia_router">  
+    <img src="https://img.shields.io/pub/v/dia_router.svg"  
+      alt="Pub Package" />  
+</a>
 
-Middleware like as koa_router.
+Router middleware for [Dia](https://github.com/unger1984/dia).
+
+This package allows you to create separate middleware for specific urls and http methods
+
+## Install:
+
+Add to pubspec.yaml in dependencies section this:
+
+```yaml
+    dia_router: ^0.0.6
+```
+
+Then run `pub get`
 
 ## Usage:
 
@@ -29,7 +44,7 @@ main() {
 
   app
       .listen('localhost', 8080)
-      .then((info) => print('Server started on http://localhost:8080'));
+      .then((info) => print('Route example on http://localhost:8080/perfix/path/12?count=10'));
 }
 ```
 
@@ -40,7 +55,7 @@ params={id:12} query={count:10}
 
 Router support all HTTP method: GET,POST,PUT,PATCH,OPTION,DELETE,HEADER,CONNECT,TRACE
 
-For more details, please, see example folder && test folder.
+For more details, please, see example folder and test folder.
 
 ## Use with:
 

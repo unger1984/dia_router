@@ -1,6 +1,8 @@
 import 'package:dia/dia.dart';
 
-/// Mixin to context
+/// Mixin to [Context]
+/// extends default [Context] additional fields specified
+/// for [Router]
 mixin Routing on Context {
   Map<String, String> _params = {};
   final Map<String, String> _query = {};

@@ -1,6 +1,5 @@
-/// Support for doing something awesome.
-///
-/// More dartdocs go here.
+/// Middleware for Dia. Allows you to create separate middleware
+/// for specific urls and http methods
 library dia_router;
 
 export 'src/router.dart';
