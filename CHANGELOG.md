@@ -1,3 +1,9 @@
+## 0.1.0
+
+- Update Dia version to 0.1.0
+- Add migration guide
+
+
 ## 0.0.6
 
 - Update Dia version to 0.0.8

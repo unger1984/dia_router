@@ -13,7 +13,7 @@ void main() {
   App<ContextWithRouting>? dia;
 
   setUp(() {
-    dia = App<ContextWithRouting>();
+    dia = App((req) => ContextWithRouting(req));
     dia?.listen('localhost', 8080);
 
     final router = Router('/');

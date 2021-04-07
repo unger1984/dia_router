@@ -9,7 +9,7 @@ class ContextWithRouting extends Context with Routing {
 
 void main() {
   /// create Dia app with Routing mixin on Context
-  final app = App<ContextWithRouting>();
+  final app = App((request) => ContextWithRouting(request));
 
   /// create router and sub router
   final router1 = Router('/route');

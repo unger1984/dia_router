@@ -12,7 +12,7 @@ This package allows you to create separate middleware for specific urls and http
 Add to pubspec.yaml in dependencies section this:
 
 ```yaml
-    dia_router: ^0.0.6
+    dia_router: ^0.1.0
 ```
 
 Then run `pub get`
@@ -33,7 +33,7 @@ class ContextWithRouting extends Context with Routing {
 }
 
 main() {
-  final app = App<ContextWithRouting>();
+  final app = App((req)=>ContextWithRouting(req));
   
   final router = Router('/prefix');
   router.get('/path/:id', (ctx,next) async {
@@ -63,6 +63,20 @@ For more details, please, see example folder and test folder.
 * [dia_cors](https://github.com/unger1984/dia_cors) - Package for CORS middleware.
 * [dia_body](https://github.com/unger1984/dia_body) - Package with the middleware for parse request body.
 * [dia_static](https://github.com/unger1984/dia_static) - Package to serving static files.
+
+## Migration from 0.0.*
+
+change 
+
+```dart
+final app = App<ContextWithRouting>();
+```
+
+to
+
+```dart
+final app = App((req)=>ContextWithRouting(req));
+```
 
 ## Features and bugs:
 
