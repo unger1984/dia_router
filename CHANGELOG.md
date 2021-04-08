@@ -1,3 +1,8 @@
+## 0.1.2
+
+- Update Dia version to 0.1.1
+- Stop middleware queue if `ctx.body` not null
+
 ## 0.1.1
 
 - Optimized code

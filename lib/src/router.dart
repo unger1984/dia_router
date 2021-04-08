@@ -156,6 +156,7 @@ class Router<T extends Routing> {
         if (currentCallIndex <= lastCalledIndex) {
           throw Exception('next() called multiple times');
         }
+        if (ctx.body != null) return () => null;
         lastCalledIndex = currentCallIndex;
         var fn;
         if (middlewares.length > currentCallIndex) {
