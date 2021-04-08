@@ -12,7 +12,6 @@ import 'routing_mixin.dart';
 /// [Middleware] in [Router] mast to be [Context] with mixin [Routing]
 class Router<T extends Routing> {
   final String _prefix;
-  final List<Middleware<T>> _middlewares = [];
   final List<RouterMiddleware<T>> _routerMiddlewares = [];
 
   /// Default constructor
@@ -24,7 +23,7 @@ class Router<T extends Routing> {
   /// Add [Middleware] to Router
   /// all [Middleware] called before [RouterMiddleware]
   void use(Middleware<T> middleware) {
-    _middlewares.add(middleware);
+    _routerMiddlewares.add(RouterMiddleware(null, '/', middleware));
   }
 
   /// Add [Middleware] to all HTTP request methods
@@ -110,87 +109,17 @@ class Router<T extends Routing> {
                   ((ctx.routerPrefix + element.path).isEmpty &&
                       (ctx.request.uri.path == '/' ||
                           ctx.request.uri.path.isEmpty)) ||
+                  element.method == null ||
                   pathToRegExp(ctx.routerPrefix + element.path)
                       .hasMatch(ctx.request.uri.path))
               .toList();
 
-          // TODO detect router middleware router
-          if (filteredMiddlewares.isEmpty && _middlewares.isEmpty) {
+          if (filteredMiddlewares.isEmpty) {
             /// No handler to route
             ctx.throwError(404);
           } else {
-            /// Use middlewares
-            final useFn = _composeMiddlewares(_middlewares);
-            await useFn(ctx, null);
-
-            final allFn = _composeRouterMiddlewares(filteredMiddlewares
-                .where((element) => element.method == 'all')
-                .toList());
-            await allFn(ctx, null);
-
-            /// default OPTIONS response
-            if (ctx.request.method.toLowerCase() == 'options' &&
-                ctx.headers['Allow'] == null) {
-              final allow = filteredMiddlewares
-                  .map((e) => e.method == 'all'
-                      ? 'GET,POST,PUT,DELETE,OPTIONS,HEAD'
-                      : e.method.toUpperCase())
-                  .toList();
-              ctx.set('Allow', allow.join(','));
-              ctx.statusCode = 204;
-              ctx.body = '';
-            }
-
-            var methodFn;
-            switch (ctx.request.method.toLowerCase()) {
-              case 'get':
-                methodFn = _composeRouterMiddlewares(filteredMiddlewares
-                    .where((element) => element.method == 'get')
-                    .toList());
-                break;
-              case 'post':
-                methodFn = _composeRouterMiddlewares(filteredMiddlewares
-                    .where((element) => element.method == 'post')
-                    .toList());
-                break;
-              case 'put':
-                methodFn = _composeRouterMiddlewares(filteredMiddlewares
-                    .where((element) => element.method == 'put')
-                    .toList());
-                break;
-              case 'patch':
-                methodFn = _composeRouterMiddlewares(filteredMiddlewares
-                    .where((element) => element.method == 'patch')
-                    .toList());
-                break;
-              case 'delete':
-                methodFn = _composeRouterMiddlewares(filteredMiddlewares
-                    .where((element) => element.method == 'delete')
-                    .toList());
-                break;
-              case 'head':
-                methodFn = _composeRouterMiddlewares(filteredMiddlewares
-                    .where((element) => element.method == 'head')
-                    .toList());
-                break;
-              case 'connect':
-                methodFn = _composeRouterMiddlewares(filteredMiddlewares
-                    .where((element) => element.method == 'connect')
-                    .toList());
-                break;
-              case 'options':
-                methodFn = _composeRouterMiddlewares(filteredMiddlewares
-                    .where((element) => element.method == 'options')
-                    .toList());
-                break;
-              case 'trace':
-                methodFn = _composeRouterMiddlewares(filteredMiddlewares
-                    .where((element) => element.method == 'trace')
-                    .toList());
-                break;
-            }
-
-            if (methodFn != null) await methodFn(ctx, null);
+            final fn = _composeRouterMiddlewares(filteredMiddlewares);
+            await fn(ctx, null);
           }
         }
         ctx.routerPrefix = savedPrefix;
@@ -204,36 +133,18 @@ class Router<T extends Routing> {
     ctx.body = error.defaultBody;
   }
 
-  /// Private method for compose middlewares to one function
-  Function _composeMiddlewares(List<Middleware<T>> middlewares) {
-    return (T ctx, Middleware<T>? next) {
-      var lastCalledIndex = -1;
-
-      FutureOr dispatch(int currentCallIndex) async {
-        if (currentCallIndex <= lastCalledIndex) {
-          throw Exception('next() called multiple times');
-        }
-        lastCalledIndex = currentCallIndex;
-        var fn = middlewares.length > currentCallIndex
-            ? middlewares[currentCallIndex]
-            : null;
-        if (currentCallIndex == middlewares.length) {
-          fn = next;
-        }
-        if (fn == null) return () => null;
-        return fn(ctx, () => dispatch(currentCallIndex + 1))
-            .catchError((error, stackTrace) {
-          if (error is HttpError) {
-            _responseHttpError(ctx, error);
-          } else {
-            final err = HttpError(500, stackTrace: stackTrace, error: error);
-            _responseHttpError(ctx, err);
-          }
-        });
-      }
-
-      return dispatch(0);
-    };
+  List<String> _getAllow(T ctx) {
+    return _routerMiddlewares
+        .where((element) => (element.method != null &&
+            (pathToRegExp(ctx.routerPrefix + element.path)
+                    .hasMatch(ctx.request.uri.path) ||
+                (ctx.routerPrefix + element.path).isEmpty &&
+                    (ctx.request.uri.path == '/' ||
+                        ctx.request.uri.path.isEmpty))))
+        .map((e) => e.method == 'all'
+            ? 'GET,POST,PUT,DELETE,OPTIONS,HEAD'
+            : e.method!.toUpperCase())
+        .toList();
   }
 
   /// Private method for compose router middlewares to one function
@@ -249,15 +160,32 @@ class Router<T extends Routing> {
         var fn;
         if (middlewares.length > currentCallIndex) {
           final middleware = middlewares[currentCallIndex];
-          fn = middleware.handler;
-          final parameters = <String>[];
-          final regExp = pathToRegExp(
-              ctx.routerPrefix + middlewares[currentCallIndex].path,
-              parameters: parameters);
-          if (parameters.isNotEmpty) {
-            final match = regExp.matchAsPrefix(ctx.request.uri.path);
-            if (match != null) {
-              ctx.params = extract(parameters, match);
+          if (middleware.method == null ||
+              ((middleware.method == ctx.request.method.toLowerCase() ||
+                      middleware.method == 'all') &&
+                  pathToRegExp(ctx.routerPrefix + middleware.path)
+                      .hasMatch(ctx.request.uri.path))) {
+            fn = middleware.handler;
+            if (middleware.method != null) {
+              if (ctx.request.method.toLowerCase() == 'options' &&
+                  ctx.headers['Allow'] == null) {
+                var allow = _getAllow(ctx);
+                if (allow.isNotEmpty) {
+                  ctx.set('Allow', allow.join(','));
+                  ctx.statusCode = 204;
+                  ctx.body = '';
+                }
+              }
+              final parameters = <String>[];
+              final regExp = pathToRegExp(
+                  ctx.routerPrefix + middlewares[currentCallIndex].path,
+                  parameters: parameters);
+              if (parameters.isNotEmpty) {
+                final match = regExp.matchAsPrefix(ctx.request.uri.path);
+                if (match != null) {
+                  ctx.params = extract(parameters, match);
+                }
+              }
             }
           }
         }

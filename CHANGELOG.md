@@ -1,3 +1,8 @@
+## 0.1.1
+
+- Optimized code
+- Fix middleware order
+
 ## 0.1.0
 
 - Update Dia version to 0.1.0

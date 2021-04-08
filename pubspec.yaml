@@ -1,6 +1,6 @@
 name: dia_router
 description: A router for Dia. Allow add dia middlewares for handle different url addresses.
-version: 0.1.0
+version: 0.1.1
 homepage: https://github.com/unger1984/dia_router
 
 environment:
