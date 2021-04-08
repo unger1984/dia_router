@@ -100,7 +100,8 @@ class Router<T extends Routing> {
         /// check prefix
         final savedPrefix = ctx.routerPrefix;
         if (RegExp(r'^' + ctx.routerPrefix + _prefix + r'(\/(.+)?)?$')
-            .hasMatch(uri.path)) {
+                .hasMatch(uri.path) ||
+            ((ctx.routerPrefix + _prefix).isEmpty && uri.path == '/')) {
           ctx.routerPrefix += _prefix;
           ctx.query.addAll(ctx.request.uri.queryParameters);
 
@@ -163,9 +164,11 @@ class Router<T extends Routing> {
           final middleware = middlewares[currentCallIndex];
           if (middleware.method == null ||
               ((middleware.method == ctx.request.method.toLowerCase() ||
-                      middleware.method == 'all') &&
-                  pathToRegExp(ctx.routerPrefix + middleware.path)
-                      .hasMatch(ctx.request.uri.path))) {
+                          middleware.method == 'all') &&
+                      (pathToRegExp(ctx.routerPrefix + middleware.path)
+                          .hasMatch(ctx.request.uri.path)) ||
+                  ((ctx.routerPrefix + middleware.path).isEmpty &&
+                      ctx.request.uri.path == '/'))) {
             fn = middleware.handler;
             if (middleware.method != null) {
               if (ctx.request.method.toLowerCase() == 'options' &&
@@ -200,7 +203,8 @@ class Router<T extends Routing> {
           if (error is HttpError) {
             _responseHttpError(ctx, error);
           } else {
-            final err = HttpError(500, stackTrace: stackTrace, error: error);
+            final err =
+                HttpError(500, stackTrace: stackTrace, exception: error);
             _responseHttpError(ctx, err);
           }
         });

@@ -38,7 +38,7 @@ void main() {
   });
 
   test('Router GET', () async {
-    var response = await http.get(Uri.parse('http://localhost:8080'));
+    var response = await http.get(Uri.parse('http://localhost:8080/'));
     expect(response.statusCode, equals(200));
     expect(response.body, equals('success'));
   });

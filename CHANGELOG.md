@@ -1,3 +1,7 @@
+## 0.1.3
+
+- Fix uri path detected bug
+
 ## 0.1.2
 
 - Update Dia version to 0.1.1
