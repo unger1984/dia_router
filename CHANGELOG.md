@@ -1,3 +1,9 @@
+## 0.1.4
+
+- Update Dia version to 0.1.2
+- Fix middleware orders
+- Fix options handler
+
 ## 0.1.3
 
 - Fix uri path detected bug

@@ -11,14 +11,31 @@ import 'routing_mixin.dart';
 /// Allows you to create separate middleware for specific urls and http methods
 /// [Middleware] in [Router] mast to be [Context] with mixin [Routing]
 class Router<T extends Routing> {
-  final String _prefix;
+  late final String _prefix;
   final List<RouterMiddleware<T>> _routerMiddlewares = [];
 
   /// Default constructor
   /// [perfix] - url path that controlled by this [Router]
   Router(String prefix)
-      : assert(RegExp(r'^/').hasMatch(prefix), 'Prefix mast start with "/"'),
-        _prefix = prefix.replaceAll(RegExp(r'\/$'), '');
+      : assert(RegExp(r'^/').hasMatch(prefix), 'Prefix mast start with "/"') {
+    _prefix = prefix.replaceAll(RegExp(r'\/$'), '');
+    // options
+    use((ctx, next) async {
+      if (ctx.request.method.toLowerCase() == 'options') {
+        var allow = _getAllow(ctx);
+        if (allow.isNotEmpty) {
+          if (ctx.request.headers.value('Access-Control-Request-Method') !=
+              null)
+            ctx.set(
+                'Access-Control-Allow-Methods', allow.join(', ') + ', OPTIONS');
+          ctx.set('Allow', allow.join(', ') + ', OPTIONS');
+          ctx.statusCode = 204;
+          ctx.body = '';
+        }
+      }
+      await next();
+    });
+  }
 
   /// Add [Middleware] to Router
   /// all [Middleware] called before [RouterMiddleware]
@@ -111,8 +128,10 @@ class Router<T extends Routing> {
                       (ctx.request.uri.path == '/' ||
                           ctx.request.uri.path.isEmpty)) ||
                   element.method == null ||
-                  pathToRegExp(ctx.routerPrefix + element.path)
-                      .hasMatch(ctx.request.uri.path))
+                  (pathToRegExp(ctx.routerPrefix + element.path)
+                          .hasMatch(ctx.request.uri.path)) &&
+                      (element.method == 'all' ||
+                          element.method == ctx.request.method.toLowerCase()))
               .toList();
 
           if (filteredMiddlewares.isEmpty) {
@@ -142,9 +161,8 @@ class Router<T extends Routing> {
                 (ctx.routerPrefix + element.path).isEmpty &&
                     (ctx.request.uri.path == '/' ||
                         ctx.request.uri.path.isEmpty))))
-        .map((e) => e.method == 'all'
-            ? 'GET,POST,PUT,DELETE,OPTIONS,HEAD'
-            : e.method!.toUpperCase())
+        .map((e) =>
+            e.method == 'all' ? 'GET,POST,PUT,DELETE' : e.method!.toUpperCase())
         .toList();
   }
 
@@ -170,27 +188,18 @@ class Router<T extends Routing> {
                   ((ctx.routerPrefix + middleware.path).isEmpty &&
                       ctx.request.uri.path == '/'))) {
             fn = middleware.handler;
-            if (middleware.method != null) {
-              if (ctx.request.method.toLowerCase() == 'options' &&
-                  ctx.headers['Allow'] == null) {
-                var allow = _getAllow(ctx);
-                if (allow.isNotEmpty) {
-                  ctx.set('Allow', allow.join(','));
-                  ctx.statusCode = 204;
-                  ctx.body = '';
-                }
-              }
-              final parameters = <String>[];
-              final regExp = pathToRegExp(
-                  ctx.routerPrefix + middlewares[currentCallIndex].path,
-                  parameters: parameters);
-              if (parameters.isNotEmpty) {
-                final match = regExp.matchAsPrefix(ctx.request.uri.path);
-                if (match != null) {
-                  ctx.params = extract(parameters, match);
-                }
+            // if (middleware.method != null) {
+            final parameters = <String>[];
+            final regExp = pathToRegExp(
+                ctx.routerPrefix + middlewares[currentCallIndex].path,
+                parameters: parameters);
+            if (parameters.isNotEmpty) {
+              final match = regExp.matchAsPrefix(ctx.request.uri.path);
+              if (match != null) {
+                ctx.params = extract(parameters, match);
               }
             }
+            // }
           }
         }
         if (currentCallIndex == middlewares.length) {
@@ -203,8 +212,8 @@ class Router<T extends Routing> {
           if (error is HttpError) {
             _responseHttpError(ctx, error);
           } else {
-            final err =
-                HttpError(500, stackTrace: stackTrace, exception: error);
+            final err = HttpError(500,
+                stackTrace: stackTrace, exception: Exception(error));
             _responseHttpError(ctx, err);
           }
         });
