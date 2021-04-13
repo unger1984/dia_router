@@ -12,7 +12,7 @@ This package allows you to create separate middleware for specific urls and http
 Add to pubspec.yaml in dependencies section this:
 
 ```yaml
-    dia_router: ^0.1.4
+    dia_router: ^0.1.5
 ```
 
 Then run `pub get`

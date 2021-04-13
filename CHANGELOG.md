@@ -1,3 +1,8 @@
+## 0.1.5
+
+- Update Dia version to 0.1.3
+- Fix error handling
+
 ## 0.1.4
 
 - Update Dia version to 0.1.2

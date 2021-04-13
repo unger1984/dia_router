@@ -148,6 +148,7 @@ class Router<T extends Routing> {
 
   /// Private method for generate HTTP error response
   void _responseHttpError(T ctx, HttpError error) {
+    ctx.error = error;
     ctx.statusCode = error.status;
     ctx.contentType = io.ContentType.html;
     ctx.body = error.defaultBody;
