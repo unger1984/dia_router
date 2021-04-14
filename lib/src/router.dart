@@ -25,9 +25,12 @@ class Router<T extends Routing> {
         var allow = _getAllow(ctx);
         if (allow.isNotEmpty) {
           if (ctx.request.headers.value('Access-Control-Request-Method') !=
-              null)
+              null) {
             ctx.set(
-                'Access-Control-Allow-Methods', allow.join(', ') + ', OPTIONS');
+              'Access-Control-Allow-Methods',
+              allow.join(', ') + ', OPTIONS',
+            );
+          }
           ctx.set('Allow', allow.join(', ') + ', OPTIONS');
           ctx.statusCode = 204;
           ctx.body = '';
@@ -112,39 +115,42 @@ class Router<T extends Routing> {
 
   /// Getter for [Middleware] that can use in Dia [App]
   Middleware<T> get middleware => (T ctx, next) async {
-        final uri = ctx.request.uri;
-
         /// check prefix
         final savedPrefix = ctx.routerPrefix;
-        if (RegExp(r'^' + ctx.routerPrefix + _prefix + r'(\/(.+)?)?$')
-                .hasMatch(uri.path) ||
-            ((ctx.routerPrefix + _prefix).isEmpty && uri.path == '/')) {
-          ctx.routerPrefix += _prefix;
-          ctx.query.addAll(ctx.request.uri.queryParameters);
-
-          final filteredMiddlewares = _routerMiddlewares
-              .where((element) =>
-                  ((ctx.routerPrefix + element.path).isEmpty &&
-                      (ctx.request.uri.path == '/' ||
-                          ctx.request.uri.path.isEmpty)) ||
-                  element.method == null ||
-                  (pathToRegExp(ctx.routerPrefix + element.path)
-                          .hasMatch(ctx.request.uri.path)) &&
-                      (element.method == 'all' ||
-                          element.method == ctx.request.method.toLowerCase()))
-              .toList();
-
-          if (filteredMiddlewares.isEmpty) {
-            /// No handler to route
-            ctx.throwError(404);
-          } else {
-            final fn = _composeRouterMiddlewares(filteredMiddlewares);
-            await fn(ctx, null);
-          }
-        }
+        await _handle(ctx);
         ctx.routerPrefix = savedPrefix;
         await next();
       };
+
+  Future<void> _handle(T ctx) async {
+    final uri = ctx.request.uri;
+    if (RegExp(r'^' + ctx.routerPrefix + _prefix + r'(\/(.+)?)?$')
+            .hasMatch(uri.path) ||
+        ((ctx.routerPrefix + _prefix).isEmpty && uri.path == '/')) {
+      ctx.routerPrefix += _prefix;
+      ctx.query.addAll(ctx.request.uri.queryParameters);
+
+      final filteredMiddlewares = _routerMiddlewares
+          .where((element) =>
+              ((ctx.routerPrefix + element.path).isEmpty &&
+                  (ctx.request.uri.path == '/' ||
+                      ctx.request.uri.path.isEmpty)) ||
+              element.method == null ||
+              (pathToRegExp(ctx.routerPrefix + element.path)
+                      .hasMatch(ctx.request.uri.path)) &&
+                  (element.method == 'all' ||
+                      element.method == ctx.request.method.toLowerCase()))
+          .toList();
+
+      if (filteredMiddlewares.isEmpty) {
+        /// No handler to route
+        ctx.throwError(404);
+      } else {
+        final fn = _composeRouterMiddlewares(filteredMiddlewares);
+        await fn(ctx, null);
+      }
+    }
+  }
 
   /// Private method for generate HTTP error response
   void _responseHttpError(T ctx, HttpError error) {
@@ -167,6 +173,30 @@ class Router<T extends Routing> {
         .toList();
   }
 
+  Middleware<T>? _checkMiddleware(RouterMiddleware<T> middleware, T ctx) {
+    if (middleware.method == null ||
+        ((middleware.method == ctx.request.method.toLowerCase() ||
+                    middleware.method == 'all') &&
+                (pathToRegExp(ctx.routerPrefix + middleware.path)
+                    .hasMatch(ctx.request.uri.path)) ||
+            ((ctx.routerPrefix + middleware.path).isEmpty &&
+                ctx.request.uri.path == '/'))) {
+      final parameters = <String>[];
+      final regExp = pathToRegExp(
+        ctx.routerPrefix + middleware.path,
+        parameters: parameters,
+      );
+      if (parameters.isNotEmpty) {
+        final match = regExp.matchAsPrefix(ctx.request.uri.path);
+        if (match != null) {
+          ctx.params = extract(parameters, match);
+        }
+      }
+
+      return middleware.handler;
+    }
+  }
+
   /// Private method for compose router middlewares to one function
   Function _composeRouterMiddlewares(List<RouterMiddleware<T>> middlewares) {
     return (T ctx, next) {
@@ -181,27 +211,7 @@ class Router<T extends Routing> {
         var fn;
         if (middlewares.length > currentCallIndex) {
           final middleware = middlewares[currentCallIndex];
-          if (middleware.method == null ||
-              ((middleware.method == ctx.request.method.toLowerCase() ||
-                          middleware.method == 'all') &&
-                      (pathToRegExp(ctx.routerPrefix + middleware.path)
-                          .hasMatch(ctx.request.uri.path)) ||
-                  ((ctx.routerPrefix + middleware.path).isEmpty &&
-                      ctx.request.uri.path == '/'))) {
-            fn = middleware.handler;
-            // if (middleware.method != null) {
-            final parameters = <String>[];
-            final regExp = pathToRegExp(
-                ctx.routerPrefix + middlewares[currentCallIndex].path,
-                parameters: parameters);
-            if (parameters.isNotEmpty) {
-              final match = regExp.matchAsPrefix(ctx.request.uri.path);
-              if (match != null) {
-                ctx.params = extract(parameters, match);
-              }
-            }
-            // }
-          }
+          fn = _checkMiddleware(middleware, ctx);
         }
         if (currentCallIndex == middlewares.length) {
           fn = next != null && next is RouterMiddleware ? next.handler : next;
@@ -213,8 +223,11 @@ class Router<T extends Routing> {
           if (error is HttpError) {
             _responseHttpError(ctx, error);
           } else {
-            final err = HttpError(500,
-                stackTrace: stackTrace, exception: Exception(error));
+            final err = HttpError(
+              500,
+              stackTrace: stackTrace,
+              exception: Exception(error),
+            );
             _responseHttpError(ctx, err);
           }
         });

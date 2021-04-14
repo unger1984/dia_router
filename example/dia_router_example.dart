@@ -28,5 +28,6 @@ void main() {
 
   /// start server
   app.listen('localhost', 8080).then((_) => print(
-      'Router example start on http://localhost:8080/route/subroute/data/18'));
+        'Router example start on http://localhost:8080/route/subroute/data/18',
+      ));
 }
