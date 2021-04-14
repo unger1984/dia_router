@@ -79,7 +79,7 @@ class Router<T extends Routing> {
   /// Add [Middleware] to DELETE HTTP request methods
   /// [path] - url path that handling by added [Middleware]
   void delete(String path, Middleware<T> middleware) {
-    _routerMiddlewares.add(RouterMiddleware('put', path, middleware));
+    _routerMiddlewares.add(RouterMiddleware('delete', path, middleware));
   }
 
   /// Add [Middleware] to DELETE HTTP request methods

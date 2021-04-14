@@ -1,3 +1,8 @@
+## 0.1.6
+
+- Add dart_code_metrics
+- Fix critical bug with delete method
+
 ## 0.1.5
 
 - Update Dia version to 0.1.3
