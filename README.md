@@ -1,3 +1,5 @@
+# DEPRECATED! Move to MONOREPO https://github.com/unger1984/di
+
 <a href="https://pub.dartlang.org/packages/dia_router">  
     <img src="https://img.shields.io/pub/v/dia_router.svg"  
       alt="Pub Package" />  
